@@ -390,6 +390,26 @@ jobs:
         run: |
           rad app list || true
 
+      - name: List Kubernetes secrets on target cluster
+        if: always()
+        run: |
+          TARGET_KUBECONFIG="$HOME/.kube/target-cluster"
+          BICEP_APP_NAME=$(grep -oP "name:\s*'\K[^']+" "$APP_FILE" | head -1 || echo "$APP_NAME")
+          APP_NS="default-$BICEP_APP_NAME"
+          if [ -f "$TARGET_KUBECONFIG" ]; then
+            echo "=== Secrets in $APP_NS namespace ==="
+            kubectl --kubeconfig "$TARGET_KUBECONFIG" get secrets -n "$APP_NS" -o wide 2>&1 || true
+            echo ""
+            echo "=== Secret details ==="
+            for secret in $(kubectl --kubeconfig "$TARGET_KUBECONFIG" get secrets -n "$APP_NS" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+              echo "--- $secret ---"
+              kubectl --kubeconfig "$TARGET_KUBECONFIG" get secret "$secret" -n "$APP_NS" -o jsonpath='{.data}' 2>&1 | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"' 2>&1 || true
+              echo ""
+            done
+          fi
+          echo "=== Secrets on k3d cluster ==="
+          kubectl get secrets -n "$APP_NS" -o wide 2>&1 || true
+
       - name: Collect Radius logs
         if: always()
         run: |
