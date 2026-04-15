@@ -260,6 +260,20 @@ jobs:
             kubectl rollout restart deployment/dynamic-rp -n radius-system
           fi
 
+          # Inject AWS session credentials into Radius pods so Terraform's AWS provider
+          # can create AWS resources. These come from the runner's OIDC exchange.
+          if [ -n "$AWS_ACCESS_KEY_ID" ]; then
+            echo "Injecting AWS session credentials into Radius pods..."
+            for deploy in applications-rp dynamic-rp; do
+              kubectl patch deployment $deploy -n radius-system --type=json -p="[
+                {\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/env/-\",\"value\":{\"name\":\"AWS_ACCESS_KEY_ID\",\"value\":\"$AWS_ACCESS_KEY_ID\"}},
+                {\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/env/-\",\"value\":{\"name\":\"AWS_SECRET_ACCESS_KEY\",\"value\":\"$AWS_SECRET_ACCESS_KEY\"}},
+                {\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/env/-\",\"value\":{\"name\":\"AWS_SESSION_TOKEN\",\"value\":\"$AWS_SESSION_TOKEN\"}},
+                {\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/env/-\",\"value\":{\"name\":\"AWS_REGION\",\"value\":\"${{ vars.AWS_REGION }}\"}}
+              ]"
+            done
+          fi
+
           echo "Waiting for rollouts..."
           kubectl rollout status deployment/applications-rp -n radius-system --timeout=300s
           kubectl rollout status deployment/dynamic-rp -n radius-system --timeout=300s
@@ -328,16 +342,14 @@ jobs:
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind bicep             --template-path "ghcr.io/reshrahim/recipes/secrets:1.0"
 
-      - name: Pre-create app namespace on target cluster
+      - name: Verify app namespace on target cluster
         run: |
           TARGET_KUBECONFIG="$HOME/.kube/target-cluster"
           if [ -f "$TARGET_KUBECONFIG" ]; then
-            # Parse the application name from the Bicep file to determine the namespace.
-            # Radius creates namespaces as <group>-<app>. Default group is "default".
             BICEP_APP_NAME=$(grep -oP "name:\s*'\K[^']+" "$APP_FILE" | head -1 || echo "$APP_NAME")
             APP_NS="default-$BICEP_APP_NAME"
-            echo "Creating namespace $APP_NS on target cluster..."
-            kubectl --kubeconfig "$TARGET_KUBECONFIG" create namespace "$APP_NS" || true
+            echo "Ensuring namespace $APP_NS exists on target cluster..."
+            kubectl --kubeconfig "$TARGET_KUBECONFIG" get namespace "$APP_NS" 2>/dev/null ||               kubectl --kubeconfig "$TARGET_KUBECONFIG" create namespace "$APP_NS"
           fi
 
       - name: Deploy application
