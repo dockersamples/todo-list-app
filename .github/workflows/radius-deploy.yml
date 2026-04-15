@@ -161,6 +161,8 @@ jobs:
              "value": {"name": "app-source", "mountPath": "/app/demo", "readOnly": true}},
             {"op": "replace", "path": "/spec/template/spec/containers/0/securityContext",
              "value": {"allowPrivilegeEscalation": false, "runAsUser": 0}},
+            {"op": "add", "path": "/spec/template/spec/containers/0/resources",
+             "value": {"requests": {"memory": "512Mi", "cpu": "500m"}, "limits": {"memory": "2Gi", "cpu": "2"}}},
             {"op": "add", "path": "/spec/template/spec/initContainers/-",
              "value": {
                "name": "install-docker-cli",
@@ -340,7 +342,7 @@ jobs:
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/mySqlDatabases             --template-kind terraform             --template-path "git::https://github.com/Reshrahim/terraform.git//aws/mysql"             --parameters vpcId="${{ vars.RADIUS_VPC_ID }}"             --parameters 'subnetIds=${{ vars.RADIUS_SUBNET_IDS }}'
 
-          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind bicep             --template-path "ghcr.io/reshrahim/recipes/secrets:1.0"
+          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind terraform             --template-path "git::$REPO//Security/secrets/recipes/kubernetes/terraform?ref=$REF"
 
       - name: Verify app namespace on target cluster
         run: |
@@ -409,6 +411,29 @@ jobs:
           fi
           echo "=== Secrets on k3d cluster ==="
           kubectl get secrets -n "$APP_NS" -o wide 2>&1 || true
+
+      - name: Debug resource locations
+        if: always()
+        run: |
+          TARGET_KUBECONFIG="$HOME/.kube/target-cluster"
+          BICEP_APP_NAME=$(grep -oP "name:\s*'\K[^']+" "$APP_FILE" | head -1 || echo "$APP_NAME")
+          APP_NS="default-$BICEP_APP_NAME"
+          echo "=== All resources on EKS ($APP_NS) ==="
+          if [ -f "$TARGET_KUBECONFIG" ]; then
+            kubectl --kubeconfig "$TARGET_KUBECONFIG" get all -n "$APP_NS" 2>&1 || true
+            echo ""
+            echo "=== All namespaces on EKS ==="
+            kubectl --kubeconfig "$TARGET_KUBECONFIG" get namespaces 2>&1 || true
+          fi
+          echo ""
+          echo "=== All resources on k3d ($APP_NS) ==="
+          kubectl get all -n "$APP_NS" 2>&1 || true
+          echo ""
+          echo "=== dynamic-rp env vars ==="
+          kubectl exec -n radius-system deploy/dynamic-rp -c dynamic-rp -- env 2>&1 | grep -E 'AWS_|KUBE_CONFIG|RADIUS_TARGET' || true
+          echo ""
+          echo "=== Terraform state secrets on k3d ==="
+          kubectl get secrets -n radius-system -l "app.kubernetes.io/managed-by=terraform" -o wide 2>&1 || true
 
       - name: Collect Radius logs
         if: always()
