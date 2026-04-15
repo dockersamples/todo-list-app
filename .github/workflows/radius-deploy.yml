@@ -306,9 +306,10 @@ jobs:
             --azure-subscription-id "${{ vars.AZURE_SUBSCRIPTION_ID }}" \
             --azure-resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
 
-      - name: Register AWS provider with Radius
+      - name: Register AWS credentials with Radius
         if: ${{ vars.AWS_IAM_ROLE_ARN != '' }}
         run: |
+          rad credential register aws access-key             --access-key-id "$AWS_ACCESS_KEY_ID"             --secret-access-key "$AWS_SECRET_ACCESS_KEY"
           rad env update "$ENVIRONMENT"             --aws-region "${{ vars.AWS_REGION }}"             --aws-account-id "${{ vars.AWS_ACCOUNT_ID }}"
 
       - name: Register resource types from resource-types-contrib
