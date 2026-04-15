@@ -301,7 +301,7 @@ jobs:
       - name: Register resource types from resource-types-contrib
         run: |
           REPO_RAW="https://raw.githubusercontent.com/radius-project/resource-types-contrib/${{ env.RESOURCE_TYPES_CONTRIB_REF }}"
-          TYPES="Compute/containerImages/containerImages.yaml Compute/containers/containers.yaml Compute/persistentVolumes/persistentVolumes.yaml Compute/routes/routes.yaml Data/postgreSqlDatabases/postgreSqlDatabases.yaml Security/secrets/secrets.yaml"
+          TYPES="Compute/containerImages/containerImages.yaml Compute/containers/containers.yaml Compute/persistentVolumes/persistentVolumes.yaml Compute/routes/routes.yaml Data/postgreSqlDatabases/postgreSqlDatabases.yaml Data/mySqlDatabases/mySqlDatabases.yaml Security/secrets/secrets.yaml"
           for TYPE_YAML in $TYPES; do
             echo "Registering $TYPE_YAML..."
             curl -fsSL "$REPO_RAW/$TYPE_YAML" -o /tmp/type.yaml
@@ -324,7 +324,9 @@ jobs:
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/postgreSqlDatabases             --template-kind terraform             --template-path "git::$REPO//Data/postgreSqlDatabases/recipes/kubernetes/terraform?ref=$REF"
 
-          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind terraform             --template-path "git::$REPO//Security/secrets/recipes/kubernetes/terraform?ref=$REF"
+          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/mySqlDatabases             --template-kind terraform             --template-path "git::https://github.com/Reshrahim/terraform.git//aws/mysql"             --parameters vpcId="${{ vars.RADIUS_VPC_ID }}"             --parameters subnetIds="${{ vars.RADIUS_SUBNET_IDS }}"
+
+          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind bicep             --template-path "ghcr.io/reshrahim/recipes/secrets:1.0"
 
       - name: Pre-create app namespace on target cluster
         run: |
@@ -363,6 +365,9 @@ jobs:
           DEPLOY_PARAMS=""
           if [ -n "$APP_IMAGE" ]; then
             DEPLOY_PARAMS="--parameters image=$APP_IMAGE"
+          fi
+          if [ -n "${{ secrets.RADIUS_DB_PASSWORD }}" ]; then
+            DEPLOY_PARAMS="$DEPLOY_PARAMS --parameters password=${{ secrets.RADIUS_DB_PASSWORD }}"
           fi
           rad deploy "$APP_FILE" --environment "$ENVIRONMENT" $DEPLOY_PARAMS
           echo ""
