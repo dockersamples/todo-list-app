@@ -306,10 +306,9 @@ jobs:
             --azure-subscription-id "${{ vars.AZURE_SUBSCRIPTION_ID }}" \
             --azure-resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
 
-      - name: Register AWS credentials with Radius
+      - name: Register AWS provider with Radius
         if: ${{ vars.AWS_IAM_ROLE_ARN != '' }}
         run: |
-          rad credential register aws access-key             --access-key-id "$AWS_ACCESS_KEY_ID"             --secret-access-key "$AWS_SECRET_ACCESS_KEY"
           rad env update "$ENVIRONMENT"             --aws-region "${{ vars.AWS_REGION }}"             --aws-account-id "${{ vars.AWS_ACCOUNT_ID }}"
 
       - name: Register resource types from resource-types-contrib
@@ -338,7 +337,7 @@ jobs:
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/postgreSqlDatabases             --template-kind terraform             --template-path "git::$REPO//Data/postgreSqlDatabases/recipes/kubernetes/terraform?ref=$REF"
 
-          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/mySqlDatabases             --template-kind terraform             --template-path "git::https://github.com/Reshrahim/terraform.git//aws/mysql"             --parameters vpcId="${{ vars.RADIUS_VPC_ID }}"             --parameters subnetIds="${{ vars.RADIUS_SUBNET_IDS }}"
+          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/mySqlDatabases             --template-kind terraform             --template-path "git::https://github.com/Reshrahim/terraform.git//aws/mysql"             --parameters vpcId="${{ vars.RADIUS_VPC_ID }}"             --parameters 'subnetIds=${{ vars.RADIUS_SUBNET_IDS }}'
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind bicep             --template-path "ghcr.io/reshrahim/recipes/secrets:1.0"
 
