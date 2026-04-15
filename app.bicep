@@ -1,17 +1,48 @@
 extension radius
-extension containerImages
 extension containers
+extension mySqlDatabases
+extension secrets
+extension containerImages
 
-@description('The ID of your Radius Environment. Set automatically by the rad CLI.')
 param environment string
+
+@secure()
+param password string
 
 @description('The full container image reference to build and push. Must be lowercase.')
 param image string
 
-resource app 'Applications.Core/applications@2023-10-01-preview' = {
-  name: 'demo'
+resource todoApp 'Applications.Core/applications@2023-10-01-preview' = {
+  name: 'todo-list-app'
   properties: {
     environment: environment
+  }
+}
+
+resource database 'Radius.Data/mySqlDatabases@2025-08-01-preview' = {
+  name: 'mysql'
+  properties: {
+    environment: environment
+    application: todoApp.id
+    database: 'todos'
+    version: '8.0'
+    secretName: dbSecret.name
+  }
+}
+
+resource dbSecret 'Radius.Security/secrets@2025-08-01-preview' = {
+  name: 'dbsecret'
+  properties: {
+    environment: environment
+    application: todoApp.id
+    data: {
+      USERNAME: {
+        value: 'admin'
+      }
+      PASSWORD: {
+        value: password
+      }
+    }
   }
 }
 
@@ -22,7 +53,7 @@ resource demoImage 'Radius.Compute/containerImages@2025-08-01-preview' = {
   name: 'demo-image'
   properties: {
     environment: environment
-    application: app.id
+    application: todoApp.id
     image: image
     build: {
       context: '/app/demo'
@@ -35,7 +66,7 @@ resource demo 'Radius.Compute/containers@2025-08-01-preview' = {
   name: 'demo'
   properties: {
     environment: environment
-    application: app.id
+    application: todoApp.id
     containers: {
       demo: {
         image: demoImage.properties.image
@@ -49,6 +80,9 @@ resource demo 'Radius.Compute/containers@2025-08-01-preview' = {
     connections: {
       demoContainerImage: {
         source: demoImage.id
+      }
+      mysqldb: {
+        source: database.id
       }
     }
   }
