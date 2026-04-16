@@ -342,7 +342,7 @@ jobs:
 
           rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Data/mySqlDatabases             --template-kind terraform             --template-path "git::https://github.com/Reshrahim/terraform.git//aws/mysql"             --parameters vpcId="${{ vars.RADIUS_VPC_ID }}"             --parameters 'subnetIds=${{ vars.RADIUS_SUBNET_IDS }}'
 
-          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind terraform             --template-path "git::$REPO//Security/secrets/recipes/kubernetes/terraform?ref=$REF"
+          rad recipe register default             --environment "$ENVIRONMENT"             --resource-type Radius.Security/secrets             --template-kind terraform             --template-path "git::$REPO//Security/secrets/recipes/kubernetes/terraform?ref=update-secrets"
 
       - name: Verify app namespace on target cluster
         run: |
