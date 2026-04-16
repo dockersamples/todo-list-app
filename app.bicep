@@ -60,30 +60,3 @@ resource demoImage 'Radius.Compute/containerImages@2025-08-01-preview' = {
     }
   }
 }
-
-// Deploy a container using the image built above.
-resource demo 'Radius.Compute/containers@2025-08-01-preview' = {
-  name: 'demo'
-  properties: {
-    environment: environment
-    application: todoApp.id
-    containers: {
-      demo: {
-        image: demoImage.properties.image
-        ports: {
-          web: {
-            containerPort: 3000
-          }
-        }
-      }
-    }
-    connections: {
-      demoContainerImage: {
-        source: demoImage.id
-      }
-      mysqldb: {
-        source: database.id
-      }
-    }
-  }
-}
