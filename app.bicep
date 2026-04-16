@@ -37,7 +37,7 @@ resource dbSecret 'Radius.Security/secrets@2025-08-01-preview' = {
     application: todoApp.id
     data: {
       USERNAME: {
-        value: 'admin'
+        value: 'todoappuser'
       }
       PASSWORD: {
         value: password
