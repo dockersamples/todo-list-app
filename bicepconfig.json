@@ -1,0 +1,10 @@
+{
+  "extensions": {
+    "radius": "br:biceptypes.azurecr.io/radius:latest",
+    "aws": "br:biceptypes.azurecr.io/aws:latest",
+    "secrets": "./secrets-extension.tgz",
+    "containerImages": "./containerImages-extension.tgz",
+    "containers": "./containers-extension.tgz",
+    "mySqlDatabases": "./mySqlDatabases-extension.tgz"
+  }
+}
