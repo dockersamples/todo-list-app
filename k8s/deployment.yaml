@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-list-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: todo-list-app
+  template:
+    metadata:
+      labels:
+        app: todo-list-app
+    spec:
+      containers:
+      - name: todo-list-app
+        image: simpotiaga/todo-list-app:latest
+        ports:
+          - containerPort: 3000

@@ -1,61 +1,145 @@
-# Example to-do List Application
+# Todo List App
 
-This repository is a simple to-do list manager that runs on Node.js.
+Проект реализует полный CI/CD pipeline для приложения todo-list-app.
 
-## Getting started
-
-Download [Docker Desktop](https://www.docker.com/products/docker-desktop) for Mac or Windows. Docker Compose will be automatically installed. 
-On Linux, make sure you have the latest version of [Compose](https://docs.docker.com/compose/install/).
-
-## Clone the repository
-
-Open a terminal and clone this sample application.
-
+## Используемые технологии:
 ```
- git clone https://github.com/dockersamples/todo-list-app
+Docker
+Kubernetes (Minikube)
+GitHub Actions
+Prometheus + Grafana
+Vagrant
 ```
-
-## Run the app
-
-Navigate into the todo-list-app directory:
-
+## Структура проекта
 ```
-docker compose up -d --build
+.
+├── k8s/
+│ ├── deployment.yaml
+│ ├── service.yaml
+│ ├── ingress.yaml
+│ ├── monitoring.yaml
+│ ├── grafana-dashboard.yaml
+│ ├── auto-deploy.yaml
+├── .github/workflows/
+│ ├── ci-cd.yaml
+├── Vagrantfile
+├── Dockerfile
+├── src/
+└── README.md
 ```
+## Инфраструктура (IaC)
 
-When you run this command, you should see an output like this:
+Инфраструктура описана как код с использованием Vagrant.
 
+Развёртывание:
 ```
-[+] Running 4/4
-✔ app 3 layers [⣿⣿⣿]      0B/0B            Pulled           7.1s
-  ✔ e6f4e57cc59e Download complete                          0.9s
-  ✔ df998480d81d Download complete                          1.0s
-  ✔ 31e174fedd23 Download complete                          2.5s
-[+] Running 2/4
-  ⠸ Network todo-list-app_default           Created         0.3s
-  ⠸ Volume "todo-list-app_todo-mysql-data"  Created         0.3s
-  ✔ Container todo-list-app-app-1           Started         0.3s
-  ✔ Container todo-list-app-mysql-1         Started         0.3s
+vagrant up
 ```
-
-## List the services
-
+Внутри VM автоматически:
 ```
-docker compose ps
-NAME                    IMAGE            COMMAND                  SERVICE   CREATED          STATUS          PORTS
-todo-list-app-app-1     node:18-alpine   "docker-entrypoint.s…"   app       24 seconds ago   Up 7 seconds    127.0.0.1:3000->3000/tcp
-todo-list-app-mysql-1   mysql:8.0        "docker-entrypoint.s…"   mysql     24 seconds ago   Up 23 seconds   3306/tcp, 33060/tcp
+устанавливается Docker
+устанавливается kubectl
+устанавливается Minikube
+поднимается Kubernetes кластер
 ```
+## Развертывание инфраструктуры без Vagrant
+```
+minikube start
+minikube addons enable ingress
+```
+## Развертывание приложения
+```
+kubectl apply -f k8s/
+```
+## Доступ к приложению
+```
+minikube tunnel
+curl --resolve todo.local:80:127.0.0.1 http://todo.local
+```
+## Доступ к приложению из интернета (ngrok)
 
-If you look at the Docker Desktop GUI, you can see the containers and dive deeper into their configuration.
+Для работы приложения вне локальной сети используется ngrok.
 
+После установки с официального сайта нужно выполнить авторизацию:
+```
+ngrok config add-authtoken <YOUR_TOKEN>
+```
+Если приложение доступно локально через Kubernetes:
+```
+kubectl port-forward svc/todo-list-app 8080:3000
+```
+Запускаем ngrok:
+```
+ngrok http 8080
+```
+ngrok выдаст публичный URL вида:
+```
+https://abcd1234.ngrok.io
+```
+По этому адресу приложение будет доступно из интернета.
 
+## CI (Continuous Integration)
 
+При каждом push в ветки develop и main запускается pipeline:
 
-<img width="1330" alt="image" src="https://github.com/dockersamples/todo-list-app/assets/313480/d85a4bcf-e2c3-4917-9220-7d9b9a78dc54">
+1. сборка Docker-образа
+2. тестирование приложения
+3. публикация Docker-образа в Docker Hub
+4. версионирование образов (по commit SHA и тегу latest)
 
+Пример имени образа:
+```
+simpotiaga/todo-list-app:<commit-sha>
+simpotiaga/todo-list-app:latest
+```
+## CD (Continuous Delivery)
 
-## Access the app
+В кластере реализован механизм автоматического обновления приложения.
+Реализован через Kubernetes CronJob:
+```
+каждые 2 минуты проверяется новый образ
+Deployment обновляется автоматически
+```
+## Версионирование
 
-The to-do list app will be running at [http://localhost:3000](http://localhost:3000).
+Используется:
+```
+<dockerhub>/todo-list-app:<commit_sha>
+```
+## Секреты
+
+Хранятся в GitHub Secrets:
+```
+DOCKER_USERNAME
+DOCKER_PASSWORD
+KUBECONFIG
+```
+## Мониторинг
+
+Запуск:
+```
+kubectl apply -f k8s/monitoring.yaml
+```
+Доступ:
+```
+minikube service -n monitoring grafana
+```
+## Дашборд
+
+В Grafana настроен пользовательский dashboard для мониторинга приложения.
+Отображаются метрики CPU и памяти контейнеров.
+
+##  Git Flow
+
+1. main — production
+2. develop — разработка
+3. feature — новые фичи
+
+## Релизный цикл
+
+1. Разработка → feature branch
+2. Merge в develop
+3. CI
+4. Merge в main
+5. CD
 

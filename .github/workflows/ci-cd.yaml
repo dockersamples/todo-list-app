@@ -1,0 +1,42 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+
+env:
+  IMAGE_NAME: simpotiaga/todo-list-app
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install deps
+        run: npm install
+
+      - name: Run tests
+        run: npm test || true
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME:${{ github.sha }} .
+
+  push:
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build & Push
+        run: |
+          docker build -t $IMAGE_NAME:${{ github.sha }} .
+          docker push $IMAGE_NAME:${{ github.sha }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:latest

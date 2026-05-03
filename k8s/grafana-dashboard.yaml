@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dashboard.json: |
+    {
+      "title": "Todo App Dashboard",
+      "panels": [
+        {
+          "type": "graph",
+          "title": "CPU Usage",
+          "targets": [
+            {
+              "expr": "rate(container_cpu_usage_seconds_total[1m])"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "Memory Usage",
+          "targets": [
+            {
+              "expr": "container_memory_usage_bytes"
+            }
+          ]
+        }
+      ]
+    }

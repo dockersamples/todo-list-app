@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: auto-deploy
+spec:
+  schedule: "*/2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: updater
+            image: bitnami/kubectl:latest
+            command:
+              - /bin/sh
+              - -c
+              - |
+                kubectl set image deployment/todo-list-app \
+                todo-list-app=simpotiaga/todo-list-app:latest
+          restartPolicy: OnFailure
