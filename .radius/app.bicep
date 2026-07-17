@@ -64,5 +64,10 @@ resource todoContainer 'Radius.Compute/containers@2025-08-01-preview' = {
         }
       }
     }
+    connections: {
+      mysqldb: {
+        source: mysqlDb.id
+      }
+    }
   }
 }
